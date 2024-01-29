@@ -55,7 +55,7 @@ func Newf(format string, a ...interface{}) Error {
 }
 
 // Wrap adds stacktrace to existing error.
-func Wrap(err error) Error {
+func Wrap(err error, message string) Error {
 	if err == nil {
 		return nil
 	}
@@ -63,11 +63,11 @@ func Wrap(err error) Error {
 	if ok {
 		return e
 	}
-	return trace(err, "", 2)
+	return trace(err, message, 2)
 }
 
 func Wrapf(err error, format string, a ...interface{}) Error {
-	return trace(err, fmt.Sprintf(format, a...), 2)
+	return Wrap(err, fmt.Sprintf(format, a...))
 }
 
 // Unwrap returns the original error.
