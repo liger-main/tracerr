@@ -7,6 +7,7 @@ package tracerr
 import (
 	"fmt"
 	"runtime"
+	"strings"
 )
 
 // DefaultCap is a default cap for frames array.
@@ -24,6 +25,8 @@ type Error interface {
 type errorData struct {
 	// err contains original error.
 	err error
+	// optional additional message
+	message string
 	// frames contains stack trace of an error.
 	frames []Frame
 }
@@ -39,12 +42,16 @@ func CustomError(err error, frames []Frame) Error {
 // Errorf creates new error with stacktrace and formatted message.
 // Formatting works the same way as in fmt.Errorf.
 func Errorf(message string, args ...interface{}) Error {
-	return trace(fmt.Errorf(message, args...), 2)
+	return trace(fmt.Errorf(message, args...), "", 2)
 }
 
 // New creates new error with stacktrace.
 func New(message string) Error {
-	return trace(fmt.Errorf(message), 2)
+	return trace(fmt.Errorf(message), "", 2)
+}
+
+func Newf(format string, a ...interface{}) Error {
+	return trace(fmt.Errorf(format, a...), "", 2)
 }
 
 // Wrap adds stacktrace to existing error.
@@ -56,7 +63,11 @@ func Wrap(err error) Error {
 	if ok {
 		return e
 	}
-	return trace(err, 2)
+	return trace(err, "", 2)
+}
+
+func Wrapf(err error, format string, a ...interface{}) Error {
+	return trace(err, fmt.Sprintf(format, a...), 2)
 }
 
 // Unwrap returns the original error.
@@ -73,7 +84,23 @@ func Unwrap(err error) error {
 
 // Error returns error message.
 func (e *errorData) Error() string {
-	return e.err.Error()
+	builder := strings.Builder{}
+	if e.message != "" {
+		builder.WriteString(e.message)
+		builder.WriteString("\n")
+	}
+	builder.WriteString(e.err.Error())
+	builder.WriteString("\n")
+	isFirstFrame := true
+	for _, frame := range e.StackTrace() {
+		if !isFirstFrame {
+			builder.WriteString("\n")
+		}
+		isFirstFrame = false
+		builder.WriteString("\t")
+		builder.WriteString(frame.String())
+	}
+	return builder.String()
 }
 
 // StackTrace returns stack trace of an error.
@@ -111,7 +138,7 @@ func (f Frame) String() string {
 	return fmt.Sprintf("%s:%d %s()", f.Path, f.Line, f.Func)
 }
 
-func trace(err error, skip int) Error {
+func trace(err error, message string, skip int) Error {
 	frames := make([]Frame, 0, DefaultCap)
 	for {
 		pc, path, line, ok := runtime.Caller(skip)
@@ -128,7 +155,8 @@ func trace(err error, skip int) Error {
 		skip++
 	}
 	return &errorData{
-		err:    err,
-		frames: frames,
+		err:     err,
+		message: message,
+		frames:  frames,
 	}
 }
