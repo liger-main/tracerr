@@ -45,15 +45,6 @@ func Errorf(message string, args ...interface{}) Error {
 	return trace(fmt.Errorf(message, args...), "", 2)
 }
 
-// New creates new error with stacktrace.
-func New(message string) Error {
-	return trace(fmt.Errorf(message), "", 2)
-}
-
-func Newf(format string, a ...interface{}) Error {
-	return trace(fmt.Errorf(format, a...), "", 2)
-}
-
 // Wrap adds stacktrace to existing error.
 func Wrap(err error, message string) Error {
 	if err == nil {
